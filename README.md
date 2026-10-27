@@ -2,6 +2,8 @@
 
 **Goal in, tested repo out — an agentic engineering copilot running on NVIDIA Nemotron via Nebius Token Factory.**
 
+![Forge — goal in, tested repo out](docs/cover.png)
+
 Forge turns one sentence of intent into a small, real, *passing* Python project. It is
 not a code-completion toy: the model plans, writes files, executes the test suite in a
 sandbox, reads the failure, repairs the code, and re-runs until green — then stops and
@@ -40,6 +42,48 @@ That transcript is a real run: `examples/sample-run.txt` (offline scripted backe
 `examples/sample-real-mode-run.txt` (the same loop over the OpenAI-compatible HTTP path).
 
 ---
+
+## Inspiration
+Every developer now has an AI that can write code. Almost none of them can *prove* the code works. The last mile of engineering — run it, watch it fail, read the failure, fix it, run it again — is where AI coding tools still hand the work back to a human. I wanted to see how small and honest an agent could be if it had to earn the word "done": not a chat window that says the tests should pass, but a loop that actually runs `python -m unittest`, reads the traceback, patches the file, and runs it again, with every step visible. Nemotron 3 on Nebius Token Factory was a natural fit: a strong open model behind a plain OpenAI-compatible endpoint, so the agent stays small and the intelligence lives in the model.
+
+## What it does
+Forge turns one sentence of intent into a small, real, *passing* Python project. Give it a goal — "build a CLI that converts temperatures between Celsius, Fahrenheit and Kelvin, with unit tests". Forge plans, writes the module and a unittest file, runs the suite in a sandbox, reads the real failure (in the shipped demo, three Kelvin assertions catch a hardcoded `273` that should be `273.15`), repairs the code, and re-runs until green. `finish` is **refused while tests are failing**; a run that never gets green ends `INCOMPLETE`, not "success". Output is a directory with `SPEC.md`, working code, tests that pass on their own, a README, and a JSONL trace of every tool call. An offline mock mode lets anyone run the full loop with no key (`make smoke`, ~5 s).
+
+## How we built it
+- **Python 3.9+, standard library only.** No framework, no SDK, no dependencies. The Nebius call is `urllib` against the OpenAI-compatible `POST {NEBIUS_BASE_URL}/chat/completions` with standard `tools` / `tool_choice: "auto"` / `tool_calls` → `role: tool` messages.
+- **Five tools, deliberately:** `write_file`, `read_file`, `list_files`, `run_tests`, `finish`.
+- **A real sandbox:** every path resolved with `realpath` and confined to the run directory (`../`, absolute paths, symlink escapes rejected); the only process spawned is `python -m unittest` with a timeout, captured output, and an environment scrubbed of `NEBIUS_API_KEY`.
+- **A finish gate and a zero-test guard** so "green" always means real assertions ran.
+- **Two backends, one loop:** `NebiusBackend` (live Token Factory) and `MockBackend` (deterministic scripted trajectory) return the same OpenAI-shaped messages; there is no demo-only code path.
+- **Tested, not asserted:** 47 unit/integration tests + a 9-check smoke test, including the full real-mode HTTP path against a local fake OpenAI-compatible server.
+- Built during the submission period with an AI coding agent as pair-programmer, directed and reviewed by the entrant (full disclosure in [`SUBMISSION.md`](SUBMISSION.md)).
+
+## Challenges
+- **Tool-calling robustness:** models sometimes narrate JSON instead of emitting structured `tool_calls`; Forge parses native calls first, then falls back to fenced/bare JSON extraction.
+- **"Green" lies:** `unittest discover` exiting 0 with zero tests is treated as failure, and `finish` is gated with a retry budget so a confused model can recover instead of deadlocking.
+- **Sandboxing without a container:** path confinement + environment scrubbing + a single allowed subprocess, each unit-tested.
+- **Verifying a provider call you can't call:** with no Nebius key at build time, real mode was validated against a local OpenAI-compatible server speaking the same wire protocol — turning "trust me" into seven tests.
+- **The demo must show failure:** the reference project ships a genuine bug (`273` vs `273.15`) so the first test run really fails and the fix is a real change.
+
+## Accomplishments
+- A complete agent loop and sandbox in ~1,300 lines of dependency-free Python (~2,200 with tests) — readable in one sitting, real enough to build and test code.
+- **47 tests + 9/9 smoke checks**, all passing, including the full real-mode HTTP path against a fake endpoint — every claim reproducible with `make smoke` and no API key.
+- A finish gate and zero-test guard, so the agent's "PASS" means something.
+- Every step legible: the trace names the model, shows each tool call/observation, and prints the failing assertion verbatim.
+- It actually works end to end: the demo produces a directory whose tests pass independently and whose CLI prints `100C = 212F`.
+
+## What we learned
+- **Verification is the product.** Once the agent could run tests, the interesting engineering moved to what counts as proof: which exit codes, which "green" is a lie, when to refuse a `finish`.
+- **Small tool surfaces beat clever frameworks** — five tools and a strict protocol were more reliable than a larger API.
+- **Failure paths deserve as much design as the happy path** — the most valuable 40 lines stop the agent claiming success.
+- **An OpenAI-compatible endpoint is a superpower for small agents:** Nemotron on Token Factory gives frontier tool use without a client library.
+- **Honest offline modes make AI projects reviewable:** a deterministic backend turns "watch my video" into "run this in five seconds".
+
+## What's next
+Multi-language targets (Node, Go) with the same sandbox contract; a web UI streaming the JSONL trace live; Nebius Serverless Endpoints/Jobs deployment; repo-aware mode with a diff-based `edit_file` and a branch per run; Nemotron model routing (Nano for fast writes, Super for repair reasoning) with a cost/latency readout.
+
+## Built with
+`python` · `Nebius Token Factory` · `NVIDIA Nemotron 3 Super` · `LLM agents` · `agentic coding` · `tool calling` · `OpenAI-compatible API` · `unittest` · `urllib` · `JSONL` · `MIT License`
 
 ## Why
 
