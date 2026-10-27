@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+build/
+build-real/
+.pytest_cache/
+.DS_Store
+*.jsonl

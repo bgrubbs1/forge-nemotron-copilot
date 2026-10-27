@@ -1,0 +1,104 @@
+# NOTE: produced by pointing NEBIUS_BASE_URL at a LOCAL fake OpenAI-compatible
+# server, to prove real mode's HTTP path on a machine with no Nebius key.
+# With a real key the identical loop is driven by Nemotron on Token Factory.
+#----------------------------------------------------------------------
+==========================================================================
+ FORGE  -  natural language goal -> runnable, tested repo
+ backend : Nebius Token Factory
+ model   : nvidia/nemotron-3-super-120b-a12b
+ base_url: http://127.0.0.1:61133/v1
+ goal    : Build a CLI that converts temperatures between Celsius, Fahrenheit and Kelvin, with unit tests.
+ sandbox : /private/tmp/forge-real-sample
+==========================================================================
+
+[1/12] Plan: one module (tempconv.py), one unittest file, then verify with run_tests. Writing the spec first.
+        -> write_file(SPEC.md, 371 chars)
+          ok   wrote SPEC.md (371 bytes)
+
+[2/12] Now the module itself: Celsius/Fahrenheit/Kelvin helpers plus a small CLI.
+        -> write_file(tempconv.py, 1535 chars)
+          ok   wrote tempconv.py (1535 bytes)
+
+[3/12] And tests covering both directions, the Kelvin boundary and bad input.
+        -> write_file(test_tempconv.py, 1706 chars)
+          ok   wrote test_tempconv.py (1706 bytes)
+
+[4/12] Running the suite.
+        -> run_tests()
+         fail  exit_code: 1
+        --- output ---
+        test_celsius_to_fahrenheit (test_tempconv.TestCelsiusFahrenheit) ... ok
+        test_fahrenheit_to_celsius (test_tempconv.TestCelsiusFahrenheit) ... ok
+        test_round_trip_celsius_fahrenheit (test_tempconv.TestCelsiusFahrenheit) ... ok
+        test_celsius_to_kelvin (test_tempconv.TestKelvin) ... FAIL
+        test_kelvin_to_celsius (test_tempconv.TestKelvin) ... FAIL
+        test_cli_output (test_tempconv.TestValidation) ... ok
+        test_unknown_unit_raises (test_tempconv.TestValidation) ... ok
+        
+        ======================================================================
+        FAIL: test_celsius_to_kelvin (test_tempconv.TestKelvin)
+        ----------------------------------------------------------------------
+        Traceback (most recent call last):
+          File "/private/tmp/forge-real-sample/test_tempconv.py", line 24, in test_celsius_to_kelvin
+            self.assertAlmostEqual(tempconv.convert(0, "C", "K"), 273.15, places=4)
+        AssertionError: 273.0 != 273.15 within 4 places (0.14999999999997726 difference)
+        
+        ======================================================================
+        FAIL: test_kelvin_to_celsius (test_tempconv.TestKelvin)
+        ----------------------------------------------------------------------
+        Traceback (most recent call last):
+          File "/private/tmp/forge-real-sample/test_tempconv.py", line 28, in test_kelvin_to_celsius
+            self.assertAlmostEqual(tempconv.convert(273.15, "K", "C"), 0.0, places=4)
+        AssertionError: 0.15 != 0.0 within 4 places (0.15 difference)
+        
+        ----------------------------------------------------------------------
+        Ran 7 tests in 0.001s
+        
+        FAILED (failures=2)
+
+[5/12] Three Kelvin assertions failed: my offset is 273 instead of 273.15 (-273.15 C should be 0 K). Patching the constant.
+        -> write_file(tempconv.py, 1543 chars)
+          ok   wrote tempconv.py (1543 bytes)
+
+[6/12] Re-running the suite to confirm the fix.
+        -> run_tests()
+          ok   exit_code: 0
+        --- output ---
+        test_celsius_to_fahrenheit (test_tempconv.TestCelsiusFahrenheit) ... ok
+        test_fahrenheit_to_celsius (test_tempconv.TestCelsiusFahrenheit) ... ok
+        test_round_trip_celsius_fahrenheit (test_tempconv.TestCelsiusFahrenheit) ... ok
+        test_celsius_to_kelvin (test_tempconv.TestKelvin) ... ok
+        test_kelvin_to_celsius (test_tempconv.TestKelvin) ... ok
+        test_cli_output (test_tempconv.TestValidation) ... ok
+        test_unknown_unit_raises (test_tempconv.TestValidation) ... ok
+        
+        ----------------------------------------------------------------------
+        Ran 7 tests in 0.000s
+        
+        OK
+
+[7/12] All green. Adding a short README with usage.
+        -> write_file(README.md, 399 chars)
+          ok   wrote README.md (399 bytes)
+
+[8/12] Suite is green and the README is written. Finishing.
+        -> finish(summary=Built tempconv, a dependency-free temperature converter w...)
+          ok   run finished
+
+ PASS  8 steps, 4 file(s), 2 test run(s), tests green
+
+ summary:
+   Built tempconv, a dependency-free temperature converter with a
+   three-unit CLI. The first test run exposed a real bug (Kelvin offset
+   hardcoded to 273 instead of 273.15); the agent patched the constant and
+   the second run was green: all 7 tests pass. Demo mode uses a scripted
+   model trajectory; in real mode the same loop is driven by Nemotron on
+   Nebius Token Factory.
+
+ files in /private/tmp/forge-real-sample:
+   - README.md
+   - SPEC.md
+   - tempconv.py
+   - test_tempconv.py
+
+(exit code: 0)
