@@ -36,7 +36,7 @@ Coding and Agentic Engineering
 
 | Field | Value |
 | --- | --- |
-| Public code repository | `⚠ VERIFY — https://github.com/<your-user>/forge-nebius-nemotron` |
+| Public code repository | https://github.com/bgrubbs1/forge-nemotron-copilot |
 | Working demo / test build URL | `⚠ VERIFY — same repo URL` (it is a test build: one command runs the whole app offline — see "Testing instructions for judges" below) |
 | Video demo URL | `⚠ VERIFY — https://youtu.be/<id>` (YouTube, **Public**, under 3:00) |
 
